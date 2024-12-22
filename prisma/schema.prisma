@@ -8,9 +8,9 @@ datasource db {
 }
 
 model tb_user {
-  id           BigInt  @id(map: "pk_tb_user_id")
-  fullname     String? @db.VarChar(50)
-  email        String? @db.VarChar(255)
-  password     String? @db.VarChar(255)
+  id           BigInt  @id(map: "pk_tb_user_id") @default(autoincrement())
+  fullName     String  @db.VarChar(50)
+  email        String  @unique(map: "unique_email") @db.VarChar(255)
+  password     String  @db.VarChar(255)
   imageprofile String? @db.VarChar
 }

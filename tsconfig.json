@@ -1,25 +1,15 @@
-{ 
-
-  "compilerOptions": { 
-
-    "target": "ES2020", 
-
-    "module": "commonjs", 
-
-    "strict": true, 
-
-    "esModuleInterop": true, 
-
-    "skipLibCheck": true, 
-
-    "forceConsistentCasingInFileNames": true, 
-
-    "outDir": "./dist" 
-
-  }, 
-
-  "include": ["src"], 
-
-  "exclude": ["node_modules"] 
-
-} 
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "commonjs",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "outDir": "./dist",
+        "jsx": "react"  // Adicionado para permitir JSX em arquivos .tsx
+    },
+    "include": ["src"],
+    "exclude": ["node_modules"]
+}
+  

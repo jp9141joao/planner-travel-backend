@@ -3,70 +3,79 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { CreateUser } from './request';
+import { CreateUser, LoginUser } from './request';
+import { Utils } from './utils';
+import { HttpResult } from './models/httpresult';
 
 dotenv.config();
 const SECRET_KEY = process.env.SECRET_KEY;
 const prisma = new PrismaClient();
 
-export const authSession = async (req: Request, res: Response) => {
+export const authSession = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body as LoginUser;
 
         if (!SECRET_KEY) {
-            throw new Error("SECRET_KET is not defined in the .env file.");
+            throw new Error("SECRET_KEY is not defined in the .env file.");
         }
 
         if (!Utils.isValidEmail(email))  {
-            return res.status(400).json(HttpResult.Fail("Error: The value of email is invalid!"));
+            res.status(400).json(HttpResult.Fail("Error: The value of email is invalid!"));
+            return;
         }
 
-        if (!Utils.isValidPassword) {
-            return res.status(400).json(HttpResult.Fail("Error: The value of password is invalid!"));
+        if (!Utils.isValidPassword(password)) {
+            res.status(400).json(HttpResult.Fail("Error: The value of password is invalid!"));
+            return;
         }
 
         const userData = await prisma.tb_user.findUnique({
             where: {
-                email: email,
+                email: email
             }
-        });
+        })
 
         if (!userData) {
-            return res.status(400).json(HttpResult.Fail("Error: The user was not found!"));
+            res.status(400).json(HttpResult.Fail("Error: The user was not found!"));
+            return;
         }
 
         const validPassword = await bcrypt.compare(password, userData.password);
 
         if (!validPassword) {
-            return res.status(400).json(HttpResult.Fail("Error: Invalid credentials!"));
+            res.status(400).json(HttpResult.Fail("Error: Invalid credentials!"));
+            return;
         }
 
         const token = jwt.sign(
-            { email, password },
+            { email },
             SECRET_KEY,
-            { expires: '1h'}
+            { expiresIn: '1h'}
         )
 
-        res.status(200).json(HttpResult.Sucess(token));
+        res.status(200).json(HttpResult.Success(token));
     } catch(error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on authSession"));
     }
 }
 
-export const createUser = async (req: Request, res: Response) => {
+export const createUser = async (req: Request, res: Response): Promise<void> => {
     try {
         const { fullName, email, password } = req.body as CreateUser;
 
         if (!Utils.doesValueExist(fullName) || typeof fullName != 'string' || fullName.length > 50) {
-            return res.status(400).json(HttpResult.Fail("Error: The value of fullName is invalid!"));
+            res.status(400).json(HttpResult.Fail("Error: The value of fullName is invalid!"));
+            return;
         }
 
         if (!Utils.doesValueExist(email) || typeof email != 'string' || email.length > 255) {
-            return res.status(400).json(HttpResult.Fail("Error: The value of email is invalid!"));
+            res.status(400).json(HttpResult.Fail("Error: The value of email is invalid!"))
+            return;
         }
 
         if (!Utils.doesValueExist(password) || typeof password != 'string' || password.length < 8 || password.length > 255) {
-            return res.status(400).json(HttpResult.Fail("Error: The value of password is invalid!"));
+            res.status(400).json(HttpResult.Fail("Error: The value of password is invalid!"))
+            return;
         }
 
         const doesUserExist = (await prisma.tb_user.count({
@@ -76,7 +85,8 @@ export const createUser = async (req: Request, res: Response) => {
         }) > 0);
 
         if (doesUserExist) {
-            return res.status(400).json(HttpResult.Fail("Error: There is already a user using this email!"));
+            res.status(400).json(HttpResult.Fail("Error: There is already a user using this email!"));
+            return;
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -85,30 +95,33 @@ export const createUser = async (req: Request, res: Response) => {
             data: {
                 fullName: fullName,
                 email: email,
-                password: hashedPassword,
+                password: hashedPassword
             }
         });
 
-        res.status(200).json(HttpResult.Sucess("User created successfully"));
+        res.status(200).json(HttpResult.Success("User created successfully"));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on createUser"));
     }
 }
 
-export const changePassword = async (req: Request, res: Response) => {
+export const changePassword = async (req: Request, res: Response): Promise<void> => {
     try {
         const { email, password, newPassword } = req.body;
 
         if (!Utils.doesValueExist(email) || typeof email != 'string' || email.length > 255) {
-            return res.status(400).json(HttpResult.Fail("Error: The value of email is invalid!"));
+            res.status(400).json(HttpResult.Fail("Error: The value of email is invalid!"));
+            return;
         }
 
         if (!Utils.isValidPassword(password)) {
-            return res.status(400).json(HttpResult.Fail("Error: The value of password is invalid!"));
+            res.status(400).json(HttpResult.Fail("Error: The value of password is invalid!"));
+            return;
         }
 
         if (!Utils.isValidPassword(newPassword)) {
-            return res.status(400).json(HttpResult.Fail("Error: The value of newPassword is invalid!"));
+            res.status(400).json(HttpResult.Fail("Error: The value of newPassword is invalid!"));
+            return;
         }
 
         const userData = await prisma.tb_user.findUnique({
@@ -118,13 +131,15 @@ export const changePassword = async (req: Request, res: Response) => {
         });
 
         if (!userData) {
-            return res.status(400).json(HttpResult.Fail("Error: The user was not found!"));
+            res.status(400).json(HttpResult.Fail("Error: The user was not found!"));
+            return;
         }
 
         const validPassword = await bcrypt.compare(password, userData.password);
 
         if (!validPassword) {
-            return res.status(400).json(HttpResult.Fail("Error: Invalid credentials!"));
+            res.status(400).json(HttpResult.Fail("Error: Invalid credentials!"));
+            return;
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -138,8 +153,9 @@ export const changePassword = async (req: Request, res: Response) => {
             }
         });
 
-        res.status(200).json(HttpResult.Sucess("Password changed successfully"));
+        res.status(200).json(HttpResult.Success("Password changed successfully"));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on changePassword"));
     }
 }
+
