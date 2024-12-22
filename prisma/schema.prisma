@@ -1,0 +1,16 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model tb_user {
+  id           BigInt  @id(map: "pk_tb_user_id")
+  fullname     String? @db.VarChar(50)
+  email        String? @db.VarChar(255)
+  password     String? @db.VarChar(255)
+  imageprofile String? @db.VarChar
+}
