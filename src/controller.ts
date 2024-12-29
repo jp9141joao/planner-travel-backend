@@ -22,12 +22,18 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
         if (!Utils.isValidEmail(email))  {
             res.status(400).json(HttpResult.Fail("Error: The value of email is invalid!"));
             return;
+        } else if (email.length > 255) {
+            res.status(400).json(HttpResult.Fail("Error: The value of email is too large!"));
+            return;;
         }
 
         if (!Utils.isValidPassword(password)) {
             res.status(400).json(HttpResult.Fail("Error: The value of password is invalid!"));
             return;
-        }
+        } else if (password.length > 255) {
+            res.status(400).json(HttpResult.Fail("Error: The value of password is too large!"));
+            return;
+        } 
 
         const userData = await prisma.tb_user.findUnique({
             where: {
@@ -62,21 +68,31 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
 export const createUser = async (req: Request, res: Response): Promise<void> => {
     try {
         const { fullName, email, password } = req.body as CreateUser;
-
-        if (!Utils.doesValueExist(fullName) || typeof fullName != 'string' || fullName.length > 50) {
-            res.status(400).json(HttpResult.Fail("Error: The value of fullName is invalid!"));
+        console.log(!Utils.isFullNameValid(fullName));
+        if (!Utils.doesValueExist(fullName) || !Utils.isFullNameValid(fullName)) {
+            res.status(404).json(HttpResult.Fail("Error: The value of fullName is invalid!"));
+            return;
+        } else if (fullName.length > 50) {
+            res.status(404).json(HttpResult.Fail("Error: The value of fullName is too large!"));
             return;
         }
 
-        if (!Utils.doesValueExist(email) || typeof email != 'string' || email.length > 255) {
-            res.status(400).json(HttpResult.Fail("Error: The value of email is invalid!"))
+
+        if (!Utils.doesValueExist(email) || !Utils.isValidEmail(email))  {
+            res.status(404).json(HttpResult.Fail("Error: The value of email is invalid!"));
             return;
+        } else if (email.length > 255) {
+            res.status(404).json(HttpResult.Fail("Error: The value of email is too large!"));
+            return;;
         }
 
-        if (!Utils.doesValueExist(password) || typeof password != 'string' || password.length < 8 || password.length > 255) {
-            res.status(400).json(HttpResult.Fail("Error: The value of password is invalid!"))
+        if (!Utils.doesValueExist(password) || !Utils.isValidPassword(password)) {
+            res.status(404).json(HttpResult.Fail("Error: The value of password is invalid!"));
             return;
-        }
+        } else if (password.length > 255) {
+            res.status(404).json(HttpResult.Fail("Error: The value of password is too large!"));
+            return;
+        } 
 
         const doesUserExist = (await prisma.tb_user.count({
             where: {
@@ -85,7 +101,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         }) > 0);
 
         if (doesUserExist) {
-            res.status(400).json(HttpResult.Fail("Error: There is already a user using this email!"));
+            res.status(404).json(HttpResult.Fail("Error: There is already a user using this email!"));
             return;
         }
 
@@ -108,7 +124,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 export const changePassword = async (req: Request, res: Response): Promise<void> => {
     try {
         const { email, password, newPassword } = req.body;
-
+        email
         if (!Utils.doesValueExist(email) || typeof email != 'string' || email.length > 255) {
             res.status(400).json(HttpResult.Fail("Error: The value of email is invalid!"));
             return;

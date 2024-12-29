@@ -5,8 +5,11 @@ import { routes } from './routes';
 const app = express();
 const port = 3000;
 
-app.use(cors());
-
+app.use(cors({
+  origin: 'http://localhost:5173', // Permite apenas esta origem
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Permite métodos específicos
+  allowedHeaders: ['Content-Type', 'Authorization'] // Permite headers específicos
+}));
 app.use(express.json());
 app.use(routes);
 
