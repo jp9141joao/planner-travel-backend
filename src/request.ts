@@ -15,3 +15,9 @@ export interface UpdateUser {
     email?: string
     imageProfile?: string
 }
+
+export interface NewPasswordUser {
+    email: string,
+    password: string,
+    newPassword: string
+}

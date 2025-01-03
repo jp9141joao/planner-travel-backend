@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { CreateUser, LoginUser } from './request';
+import { CreateUser, LoginUser, NewPasswordUser } from './request';
 import { Utils } from './utils';
 import { HttpResult } from './models/httpresult';
 
@@ -89,10 +89,13 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         if (!Utils.doesValueExist(password) || !Utils.isValidPassword(password)) {
             res.status(404).json(HttpResult.Fail("Error: The value of password is invalid!"));
             return;
+        } else if (password.length < 8) {
+            res.status(404).json(HttpResult.Fail("Error: The value of password is too short!"));
+            return;
         } else if (password.length > 255) {
             res.status(404).json(HttpResult.Fail("Error: The value of password is too large!"));
             return;
-        } 
+        }
 
         const doesUserExist = (await prisma.tb_user.count({
             where: {
@@ -123,20 +126,27 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
 
 export const changePassword = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { email, password, newPassword } = req.body;
-        email
+        const { email, password, newPassword } = req.body as NewPasswordUser;
+
+        console.log(email)
         if (!Utils.doesValueExist(email) || typeof email != 'string' || email.length > 255) {
-            res.status(400).json(HttpResult.Fail("Error: The value of email is invalid!"));
+            res.status(404).json(HttpResult.Fail("Error: The value of email is invalid!"));
             return;
         }
 
         if (!Utils.isValidPassword(password)) {
-            res.status(400).json(HttpResult.Fail("Error: The value of password is invalid!"));
+            res.status(404).json(HttpResult.Fail("Error: The value of password is invalid!"));
             return;
         }
 
-        if (!Utils.isValidPassword(newPassword)) {
-            res.status(400).json(HttpResult.Fail("Error: The value of newPassword is invalid!"));
+        if (!Utils.doesValueExist(newPassword) || !Utils.isValidPassword(newPassword)) {
+            res.status(404).json(HttpResult.Fail("Error: The value of newPassword is invalid!"));
+            return;
+        } else if (newPassword.length < 8) {
+            res.status(404).json(HttpResult.Fail("Error: The value of newPassword is too short!"));
+            return;
+        } else if (newPassword.length > 255) {
+            res.status(404).json(HttpResult.Fail("Error: The value of newPassword is too large!"));
             return;
         }
 
@@ -147,18 +157,25 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
         });
 
         if (!userData) {
-            res.status(400).json(HttpResult.Fail("Error: The user was not found!"));
+            res.status(404).json(HttpResult.Fail("Error: The email or password you entered is incorrect!"));
             return;
         }
 
         const validPassword = await bcrypt.compare(password, userData.password);
 
         if (!validPassword) {
-            res.status(400).json(HttpResult.Fail("Error: Invalid credentials!"));
+            res.status(404).json(HttpResult.Fail("Error: The email or password you entered is incorrect!"));
             return;
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        const isTheSamePassowrd = await bcrypt.compare(newPassword, userData.password) ? true : false;
+
+        if (isTheSamePassowrd) {
+            res.status(404).json(HttpResult.Fail("Error: The value of newPassword is the same as your current password!"));
+            return;
+        }
 
         await prisma.tb_user.update({
             where: {
