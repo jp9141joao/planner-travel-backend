@@ -56,7 +56,6 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
         )
 
         res.status(200).json(HttpResult.Success(token));
-        console.log(token)
     } catch(error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on authSession"));
         console.error(error)
