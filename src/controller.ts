@@ -41,7 +41,7 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
             res.status(400).json(HttpResult.Fail("Error: The email or password you entered is incorrect!"));
             return;
         }
-
+        
         const validPassword = await bcrypt.compare(password, userData.password);
 
         if (!validPassword) {
@@ -202,14 +202,15 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
             res.status(401).json(HttpResult.Fail("Token was not provided!"));
             return;
         }
-        
+
         const decoded = jwt.verify(token, SECRET_KEY) as { email: string };
         const email = decoded.email;
 
-        if (email) {
+        if (!email) {
             res.status(401).json(HttpResult.Fail("Token provided is invalid!"));
             return;
         }
+
 
         const doesEmailExist = await prisma.tb_user.count({
             where: {
@@ -228,8 +229,15 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
             }
         });
 
-        res.status(200).json(HttpResult.Success({gotUser}));
+        const gotUserFormatted = {
+            ...gotUser,
+            id: gotUser?.id.toString(),
+        };
+        
+        res.status(200).json(HttpResult.Success({gotUserFormatted}));
     } catch (error: any) {
+        console.error(error)
         res.status(400).json(HttpResult.Fail("A unexpected error occured on getUser!"));
     }
 }
+
