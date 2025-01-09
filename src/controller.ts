@@ -241,6 +241,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
 }
 
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
+    
     try {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
@@ -249,6 +250,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         if (!SECRET_KEY) {
             throw new Error("SECRET_KEY is not defined in the .env file.");
         }
+
 
         if (!token) {
             res.status(401).json(HttpResult.Fail("Token was not provided!"));
@@ -291,7 +293,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
             }
         }) > 0 ? true : false;
 
-        if (doesNewEmailExist) {
+        if (doesNewEmailExist && email != emailData) {
             res.status(404).json(HttpResult.Fail("Error: There is already a user using this email!"));
             return;  
         }
@@ -306,8 +308,14 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
             }
         });
 
-        res.status(200).json(HttpResult.Success(updateUser));
+        const updatedUserFormated = {
+            ...updatedUser,
+            id: updatedUser.id.toString(),
+        }
+
+        res.status(200).json(HttpResult.Success(updatedUserFormated));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on updateUser!"));
+        console.log(error)
     }
 }
