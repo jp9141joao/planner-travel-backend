@@ -66,6 +66,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     try {
         const { fullName, email, password } = req.body as CreateUser;
         console.log(!Utils.isFullNameValid(fullName));
+        
         if (!Utils.doesValueExist(fullName) || !Utils.isFullNameValid(fullName)) {
             res.status(404).json(HttpResult.Fail("Error: The value of fullName is invalid!"));
             return;
@@ -73,7 +74,6 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
             res.status(404).json(HttpResult.Fail("Error: The value of fullName is too large!"));
             return;
         }
-
 
         if (!Utils.doesValueExist(email) || !Utils.isValidEmail(email))  {
             res.status(404).json(HttpResult.Fail("Error: The value of email is invalid!"));
@@ -211,7 +211,6 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-
         const doesEmailExist = await prisma.tb_user.count({
             where: {
                 email: email,
@@ -234,10 +233,81 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
             id: gotUser?.id.toString(),
         };
         
-        res.status(200).json(HttpResult.Success({gotUserFormatted}));
+        res.status(200).json(HttpResult.Success(gotUserFormatted));
     } catch (error: any) {
         console.error(error)
         res.status(400).json(HttpResult.Fail("A unexpected error occured on getUser!"));
     }
 }
 
+export const updateUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const { fullName, email } = req.body;
+
+        if (!SECRET_KEY) {
+            throw new Error("SECRET_KEY is not defined in the .env file.");
+        }
+
+        if (!token) {
+            res.status(401).json(HttpResult.Fail("Token was not provided!"));
+            return;
+        }
+        
+        if (!Utils.doesValueExist(fullName) || !Utils.isFullNameValid(fullName)) {
+            res.status(404).json(HttpResult.Fail("Error: The value of fullName is invalid!"));
+            return;
+        } else if (fullName.length > 50) {
+            res.status(404).json(HttpResult.Fail("Error: The value of fullName is too large!"));
+            return;
+        }
+
+        if (!Utils.doesValueExist(email) || !Utils.isValidEmail(email))  {
+            res.status(404).json(HttpResult.Fail("Error: The value of email is invalid!"));
+            return;
+        } else if (email.length > 255) {
+            res.status(404).json(HttpResult.Fail("Error: The value of email is too large!"));
+            return;;
+        }
+
+        const decoded = jwt.verify(token, SECRET_KEY) as { email: string };
+        const emailData = decoded.email;
+
+        const doesEmailExist = await prisma.tb_user.count({
+            where: {
+                email: emailData,
+            }
+        }) > 0 ? true : false;
+
+        if (!doesEmailExist) {
+            res.status(401).json(HttpResult.Fail("Error: Email does not exist!"));
+            return;  
+        }
+
+        const doesNewEmailExist = await prisma.tb_user.count({
+            where: {
+                email: email,
+            }
+        }) > 0 ? true : false;
+
+        if (doesNewEmailExist) {
+            res.status(404).json(HttpResult.Fail("Error: There is already a user using this email!"));
+            return;  
+        }
+
+        const updatedUser = await prisma.tb_user.update({
+            where: {
+                email: emailData,
+            },
+            data: {
+                fullName: fullName,
+                email: email,
+            }
+        });
+
+        res.status(200).json(HttpResult.Success(updateUser));
+    } catch (error: any) {
+        res.status(400).json(HttpResult.Fail("A unexpected error occured on updateUser!"));
+    }
+}
