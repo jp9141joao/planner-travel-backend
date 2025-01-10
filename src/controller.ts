@@ -58,7 +58,7 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
         res.status(200).json(HttpResult.Success(token));
     } catch(error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on authSession"));
-        console.error(error)
+        console.error(error);
     }
 }
 
@@ -118,6 +118,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         res.status(200).json(HttpResult.Success("User created successfully"));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on createUser"));
+        console.error(error);
     }
 }
 
@@ -186,6 +187,7 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
         res.status(200).json(HttpResult.Success("Password changed successfully"));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on changePassword"));
+        console.error(error);
     }
 }
 
@@ -235,8 +237,8 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
         
         res.status(200).json(HttpResult.Success(gotUserFormatted));
     } catch (error: any) {
-        console.error(error)
         res.status(400).json(HttpResult.Fail("A unexpected error occured on getUser!"));
+        console.error(error);
     }
 }
 
@@ -316,6 +318,6 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         res.status(200).json(HttpResult.Success(updatedUserFormated));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on updateUser!"));
-        console.log(error)
+        console.log(error);
     }
 }
