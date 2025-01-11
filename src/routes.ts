@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authSession, changePassword, createUser, getUser, updateUser } from './controller';
+import { authSession, changePassword, createTrip, createUser, getUser, updateUser } from './controller';
 
 const routes = Router();
 
@@ -8,6 +8,6 @@ routes.get('/signIn', getUser);
 routes.post('/signUp', createUser);
 routes.put('/resetPassword', changePassword);
 routes.put('/profileSettings', updateUser);
-
+routes.post('/addTrips', createTrip);
 
 export { routes };

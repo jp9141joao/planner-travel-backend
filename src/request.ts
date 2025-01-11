@@ -7,17 +7,26 @@ export interface CreateUser {
     fullName: string
     email: string,
     password: string,
-    imageProfile?: string
 }
 
 export interface UpdateUser {
     fullName?: string,
     email?: string
-    imageProfile?: string
 }
 
 export interface NewPasswordUser {
     email: string,
     password: string,
     newPassword: string
+}
+
+export interface CreateTrip {
+    userId: bigint,
+    tripName: string,
+    period: number
+}
+
+export interface TokenContent {
+    id: bigint,
+    email: string,
 }

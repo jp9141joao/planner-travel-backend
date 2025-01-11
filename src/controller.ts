@@ -3,11 +3,10 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { CreateUser, LoginUser, NewPasswordUser } from './request';
+import { CreateTrip, CreateUser, LoginUser, NewPasswordUser, TokenContent } from './request';
 import { Utils } from './utils';
 import { HttpResult } from './models/httpresult';
-import { decode } from 'punycode';
-import { Console } from 'console';
+
 
 dotenv.config();
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -48,9 +47,11 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
             res.status(404).json(HttpResult.Fail("Error: The email or password you entered is incorrect!"));
             return;
         }
+
+        const id = userData.id;
         
         const token = jwt.sign(
-            { email },
+            { id, email },
             SECRET_KEY,
             { expiresIn: '1h'}
         )
@@ -205,7 +206,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        const decoded = jwt.verify(token, SECRET_KEY) as { email: string };
+        const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
         const email = decoded.email;
 
         if (!email) {
@@ -245,14 +246,13 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
 export const updateUser = async (req: Request, res: Response): Promise<void> => {
     
     try {
+        const { fullName, email } = req.body;
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
-        const { fullName, email } = req.body;
 
         if (!SECRET_KEY) {
             throw new Error("SECRET_KEY is not defined in the .env file.");
         }
-
 
         if (!token) {
             res.status(401).json(HttpResult.Fail("Token was not provided!"));
@@ -275,7 +275,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
             return;;
         }
 
-        const decoded = jwt.verify(token, SECRET_KEY) as { email: string };
+        const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
         const emailData = decoded.email;
 
         const doesEmailExist = await prisma.tb_user.count({
@@ -316,6 +316,71 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         }
 
         res.status(200).json(HttpResult.Success(updatedUserFormated));
+    } catch (error: any) {
+        res.status(400).json(HttpResult.Fail("A unexpected error occured on updateUser!"));
+        console.log(error);
+    }
+}
+
+export const createTrip = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { tripName, period } = req.body as CreateTrip;
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!SECRET_KEY) {
+            throw new Error("SECRET_KEY is not defined in the .env file.");
+        }
+  
+        if (!token) {
+            res.status(401).json(HttpResult.Fail("Token was not provided!"));
+            return;
+        }
+
+        const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
+        const id = decoded.id;
+  
+        if (!Utils.doesValueExist(id) && !Utils.isBigInt(id)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of user ID is invalid or was not provided correctly"));
+            return;    
+        }
+  
+        if (!Utils.doesValueExist(tripName) && typeof tripName != 'string') {
+            res.status(404).json(HttpResult.Fail("Error: The value of tripName is invalid!"));
+            return;
+        } else if (tripName.length < 3) {
+            res.status(404).json(HttpResult.Fail("Error: The value of tripName is too short!"));
+            return;
+        } else if (tripName.length > 50) {
+            res.status(404).json(HttpResult.Fail("Error: The value of tripName is too large!"));
+            return;
+        }
+
+        if (!Utils.doesValueExist(period) && !Utils.isNumber(period) && period != undefined && period < 1) {
+            res.status(404).json(HttpResult.Fail("Error: The value of period is invalid!"));
+            return;
+        } 
+
+        const doesUserExist = await prisma.tb_user.findUnique({
+            where: {
+                id: BigInt(id),
+            }
+        });
+
+        if (!doesUserExist) {
+            res.status(404).json(HttpResult.Fail("Error: The user does not exist"));
+            return;
+        }
+
+        await prisma.tb_trip.create({
+            data: {
+                userId: id,
+                tripName: tripName,
+                period: period,
+            }
+        });
+
+        res.status(200).json(HttpResult.Success("Trip created successfully"));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on updateUser!"));
         console.log(error);
