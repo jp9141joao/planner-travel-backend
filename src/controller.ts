@@ -14,7 +14,6 @@ const prisma = new PrismaClient();
 
 export const authSession = async (req: Request, res: Response): Promise<void> => {
     try {
-        console.log(10)
         const { email, password } = req.body as LoginUser;
 
         if (!SECRET_KEY) {
@@ -390,6 +389,47 @@ export const createTrip = async (req: Request, res: Response): Promise<void> => 
         res.status(200).json(HttpResult.Success("Trip created successfully"));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on updateUser!"));
+        console.log(error);
+    }
+}
+
+export const getTrips = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!SECRET_KEY) {
+            throw new Error("SECRET_KEY is not defined in the .env file.");
+        }
+  
+        if (!token) {
+            res.status(401).json(HttpResult.Fail("Token was not provided!"));
+            return;
+        }
+
+        const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
+        const id = decoded.id;
+
+        if (!Utils.doesValueExist(id) || !Utils.isBigInt(id)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of user ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        const gotTrips = await prisma.tb_trip.findMany({
+            where: {
+                userId: BigInt(id),
+            }
+        });
+        
+        const gotTripsFormatted = gotTrips.map((trip: any) => {
+            trip.id = trip.id.toString();
+            trip.userId = trip.userId.toString();
+            return trip;
+        });
+
+        res.status(200).json(HttpResult.Success(gotTripsFormatted));
+    } catch (error: any) {
+        res.status(400).json(HttpResult.Fail("A unexpected error occured on getTrips!"));
         console.log(error);
     }
 }
