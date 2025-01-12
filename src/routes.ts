@@ -4,7 +4,7 @@ import { authSession, changePassword, createTrip, createUser, getUser, updateUse
 const routes = Router();
 
 routes.post('/signIn', authSession);
-routes.get('/signIn', getUser);
+routes.get('/home', getUser);
 routes.post('/signUp', createUser);
 routes.put('/resetPassword', changePassword);
 routes.put('/profileSettings', updateUser);

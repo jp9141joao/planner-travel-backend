@@ -14,6 +14,7 @@ const prisma = new PrismaClient();
 
 export const authSession = async (req: Request, res: Response): Promise<void> => {
     try {
+        console.log(10)
         const { email, password } = req.body as LoginUser;
 
         if (!SECRET_KEY) {
@@ -48,7 +49,7 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
-        const id = userData.id;
+        const id = userData.id.toString();
         
         const token = jwt.sign(
             { id, email },
@@ -206,6 +207,8 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
+        
+
         const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
         const email = decoded.email;
 
@@ -339,13 +342,13 @@ export const createTrip = async (req: Request, res: Response): Promise<void> => 
 
         const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
         const id = decoded.id;
-  
-        if (!Utils.doesValueExist(id) && !Utils.isBigInt(id)) {
+
+        if (!Utils.doesValueExist(id) || !Utils.isBigInt(id)) {
             res.status(400).json(HttpResult.Fail("Error: the value of user ID is invalid or was not provided correctly"));
             return;    
         }
   
-        if (!Utils.doesValueExist(tripName) && typeof tripName != 'string') {
+        if (!Utils.doesValueExist(tripName) || typeof tripName != 'string') {
             res.status(404).json(HttpResult.Fail("Error: The value of tripName is invalid!"));
             return;
         } else if (tripName.length < 3) {
@@ -356,7 +359,9 @@ export const createTrip = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        if (!Utils.doesValueExist(period) && !Utils.isNumber(period) && period != undefined && period < 1) {
+
+
+        if (!Utils.doesValueExist(period) || !Utils.isNumber(period) || period <= 0) {
             res.status(404).json(HttpResult.Fail("Error: The value of period is invalid!"));
             return;
         } 
@@ -372,9 +377,11 @@ export const createTrip = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
+        console.log(period)
+
         await prisma.tb_trip.create({
             data: {
-                userId: id,
+                userId: BigInt(id),
                 tripName: tripName,
                 period: period,
             }
