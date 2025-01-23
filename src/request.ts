@@ -23,7 +23,12 @@ export interface NewPasswordUser {
 export interface CreateTrip {
     userId: bigint,
     tripName: string,
-    period: number
+    period: string,
+    daysQty: number,
+    placesQty: number,
+    currency: string,
+    budgetAmount: number,
+    season: string, 
 }
 
 export interface TokenContent {

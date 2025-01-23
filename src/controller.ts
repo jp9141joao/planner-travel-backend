@@ -53,7 +53,7 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
         const token = jwt.sign(
             { id, email },
             SECRET_KEY,
-            { expiresIn: '1h'}
+            { expiresIn: '1d'}
         )
 
         res.status(200).json(HttpResult.Success(token));
@@ -99,7 +99,7 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
             where: {
                 email: email,
             }
-        }) > 0);
+        }) > 0 ? true : false);
 
         if (doesUserExist) {
             res.status(404).json(HttpResult.Fail("Error: There is already a user using this email!"));
@@ -196,7 +196,7 @@ export const getUser = async (req: Request, res: Response): Promise<void> => {
     try {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
-
+        console.log(109)
         if (!SECRET_KEY) {
             throw new Error("SECRET_KEY is not defined in the .env file.");
         }
@@ -268,6 +268,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
             res.status(404).json(HttpResult.Fail("Error: The value of fullName is too large!"));
             return;
         }
+        
 
         if (!Utils.doesValueExist(email) || !Utils.isValidEmail(email))  {
             res.status(404).json(HttpResult.Fail("Error: The value of email is invalid!"));
@@ -326,7 +327,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 
 export const createTrip = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { tripName, period } = req.body as CreateTrip;
+        const { tripName, period, daysQty, placesQty, currency, budgetAmount, season } = req.body as CreateTrip;
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
 
@@ -358,12 +359,35 @@ export const createTrip = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-
-
-        if (!Utils.doesValueExist(period) || !Utils.isNumber(period) || period <= 0) {
+        if (!Utils.doesValueExist(period) || typeof period != 'string' || period.length != 27) {
             res.status(404).json(HttpResult.Fail("Error: The value of period is invalid!"));
             return;
-        } 
+        }
+
+        if (!Utils.doesValueExist(daysQty) || !Utils.isNumber(daysQty) || daysQty <= 0) {
+            res.status(404).json(HttpResult.Fail("Error: The value of daysQty is invalid!"));
+            return;
+        }
+
+        if (!Utils.doesValueExist(placesQty) || !Utils.isNumber(placesQty) || placesQty < 0) {
+            res.status(404).json(HttpResult.Fail("Error: The value of placesQty is invalid!"));
+            return;
+        }
+
+        if (!Utils.doesValueExist(budgetAmount) || !Utils.isNumber(budgetAmount) || budgetAmount < 0) {
+            res.status(404).json(HttpResult.Fail("Error: The value of budget is invalid!"));
+            return;
+        }
+
+        if (!Utils.doesValueExist(currency) || typeof currency != 'string' || currency.length != 3 || !["USD", "EUR", "BRL", "GBP", "JPY", "AUD", "CAD", "CHF", "CNY", "INR"].includes(currency)) {
+            res.status(404).json(HttpResult.Fail("Error: The value of currency is invalid!"));
+            return;
+        }
+
+        if (!Utils.doesValueExist(season) || typeof season != 'string' || !['Low', 'Middle', 'High'].includes(season)) {
+            res.status(404).json(HttpResult.Fail("Error: The value of season is invalid!"));
+            return;
+        }
 
         const doesUserExist = await prisma.tb_user.findUnique({
             where: {
@@ -376,13 +400,15 @@ export const createTrip = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
-        console.log(period)
-
         await prisma.tb_trip.create({
             data: {
                 userId: BigInt(id),
                 tripName: tripName,
                 period: period,
+                daysQty: daysQty,
+                placesQty: placesQty,
+                currency: currency,
+                season: season
             }
         });
 
@@ -431,5 +457,51 @@ export const getTrips = async (req: Request, res: Response): Promise<void> => {
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on getTrips!"));
         console.log(error);
+    }
+}
+
+export const deleteTrip = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        const { tripId } = req.body;
+
+        console.log(tripId)
+
+        if (!SECRET_KEY) {
+            throw new Error("SECRET_KEY is not defined in the .env file.");
+        }
+  
+        if (!token) {
+            res.status(401).json(HttpResult.Fail("Token was not provided!"));
+            return;
+        }
+
+        if (!Utils.doesValueExist(tripId) || !Utils.isBigInt(tripId)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of trip ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        const doesTripExist = await prisma.tb_trip.count({
+            where: {
+                id: BigInt(tripId),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesTripExist) {
+            res.status(404).json(HttpResult.Fail("Error: Trip does not exist!"));
+            return;
+        }
+
+        await prisma.tb_trip.delete({
+            where: {
+                id: BigInt(tripId),
+            }
+        });
+
+        res.status(200).json(HttpResult.Success("Trip deleted successfully"));
+    } catch (error: any) {
+        res.status(400).json(HttpResult.Fail("A unexpected error occured on deleteTrip!"));
+        console.log(error)
     }
 }

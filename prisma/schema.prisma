@@ -8,17 +8,20 @@ datasource db {
 }
 
 model tb_trip {
-  id       BigInt  @id(map: "pk_tb_trip_id") @default(autoincrement())
-  userId   BigInt
-  tripName String  @db.VarChar(50)
-  period   Int
-  tb_user  tb_user @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tb_trip_id_user")
+  id           BigInt  @id(map: "pk_tb_trip_id") @default(autoincrement())
+  userId       BigInt
+  tripName     String  @db.VarChar(50)
+  period       String  @db.Char(27)
+  daysQty      Int?
+  placesQty    Int?
+  currency     String? @db.Char(3)
+  budgetAmount Int?
+  season       String? @db.VarChar(7)
 }
 
 model tb_user {
-  id       BigInt    @id(map: "pk_tb_user_id") @default(autoincrement())
-  fullName String    @db.VarChar(50)
-  email    String    @unique(map: "unique_email") @db.VarChar(255)
-  password String    @db.VarChar(255)
-  tb_trip  tb_trip[]
+  id       BigInt @id(map: "pk_tb_user_id") @default(autoincrement())
+  fullName String @db.VarChar(50)
+  email    String @unique(map: "unique_email") @db.VarChar(255)
+  password String @db.VarChar(255)
 }

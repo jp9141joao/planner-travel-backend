@@ -1,7 +1,7 @@
 export class Utils {
     public static doesValueExist(value: any): boolean {
-        return value !== undefined && value !== null && value !== '';
-    }
+        return value !== undefined && value !== null && value !== '' && value !== false;
+    }    
       
     public static isValidEmail(email: any): boolean {
         try {
