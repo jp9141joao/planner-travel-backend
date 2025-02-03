@@ -25,10 +25,24 @@ export interface CreateTrip {
     tripName: string,
     period: string,
     daysQty: number,
-    placesQty: number,
     currency: string,
     budgetAmount: number,
     season: string, 
+    spent: number,
+    notes: string
+}
+
+export interface UpdateTrip {
+    id: BigInt,
+    userId: bigint,
+    tripName?: string,
+    period?: string,
+    daysQty?: number,
+    currency?: string,
+    budgetAmount?: number,
+    season?: string, 
+    spent?: number
+    notes?: string
 }
 
 export interface TokenContent {

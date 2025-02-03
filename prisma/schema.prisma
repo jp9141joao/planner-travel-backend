@@ -8,15 +8,16 @@ datasource db {
 }
 
 model tb_trip {
-  id           BigInt  @id(map: "pk_tb_trip_id") @default(autoincrement())
+  id           BigInt   @id(map: "pk_tb_trip_id") @default(autoincrement())
   userId       BigInt
-  tripName     String  @db.VarChar(50)
-  period       String  @db.Char(27)
-  daysQty      Int?
-  placesQty    Int?
-  currency     String? @db.Char(3)
-  budgetAmount Int?
-  season       String? @db.VarChar(7)
+  tripName     String   @db.VarChar(22)
+  period       String   @db.Char(27)
+  daysQty      Int
+  currency     String?  @db.Char(3)
+  budgetAmount Decimal  @db.Decimal(13, 2)
+  season       String?  @db.VarChar(7)
+  notes        String?  @db.VarChar(255)
+  spent        Decimal? @db.Decimal(13, 2)
 }
 
 model tb_user {

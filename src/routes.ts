@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authSession, changePassword, createTrip, createUser, deleteTrip, getTrips, getUser, updateUser } from './controller';
+import { authSession, changePassword, createTrip, createUser, deleteTrip, duplicateTrip, getTrip, getTrips, getUser, updateNotes, updateTrip, updateUser } from './controller';
 
 const routes = Router();
 
@@ -11,5 +11,10 @@ routes.put('/profileSettings', updateUser);
 routes.post('/addTrips', createTrip);
 routes.get('/viewTrips', getTrips);
 routes.delete('/viewTrips', deleteTrip);
+routes.post('/viewTrips', duplicateTrip);
+routes.get('/tripDetails', getTrip);
+routes.put('/tripDetails', updateNotes);
+routes.get('/editTrip', getTrip);
+routes.put('/editTrip', updateTrip);
 
 export { routes };
