@@ -522,7 +522,10 @@ export const getTrips = async (req: Request, res: Response): Promise<void> => {
         const gotTrips = await prisma.tb_trip.findMany({
             where: {
                 userId: BigInt(id),
-            }
+            },
+            orderBy: {
+                id: 'desc'
+            },
         });
         
         const gotTripsFormatted = gotTrips.map((trip: any) => {
