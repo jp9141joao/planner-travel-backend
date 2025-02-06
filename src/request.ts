@@ -33,7 +33,7 @@ export interface CreateTrip {
 }
 
 export interface UpdateTrip {
-    id: BigInt,
+    id: bigint,
     userId: bigint,
     tripName?: string,
     period?: string,
@@ -48,4 +48,18 @@ export interface UpdateTrip {
 export interface TokenContent {
     id: bigint,
     email: string,
+}
+
+export interface createExpenses {
+    tripId: bigint,
+    expense: string
+    name: string | null,
+    type: string | null,
+    duration: string | null,
+    place: string | null,
+    origin: string | null,
+    destination: string | null,
+    price: number,
+    countryCurrency: string,
+    day: number,
 }

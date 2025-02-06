@@ -3,11 +3,12 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { CreateTrip, CreateUser, LoginUser, NewPasswordUser, TokenContent, UpdateTrip, UpdateUser } from './request';
+import { createAirplaneExpense, createExpenses, createTransportationExpense, CreateTrip, CreateUser, LoginUser, NewPasswordUser, TokenContent, UpdateTrip, UpdateUser } from './request';
 import { Utils } from './utils';
 import { HttpResult } from './models/httpresult';
 import { where } from 'sequelize';
-
+import exp from 'constants';
+import { countReset } from 'console';
 
 dotenv.config();
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -749,9 +750,28 @@ export const deleteTrip = async (req: Request, res: Response): Promise<void> => 
             return;
         }
 
+        const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
+        const id = decoded.id;
+
+        if (!Utils.doesValueExist(id) || !Utils.isBigInt(id)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of user ID is invalid or was not provided correctly"));
+            return;    
+        }
+
         if (!Utils.doesValueExist(tripId) || !Utils.isBigInt(tripId)) {
             res.status(400).json(HttpResult.Fail("Error: the value of trip ID is invalid or was not provided correctly"));
             return;    
+        }
+
+        const doesUserExist = await prisma.tb_user.count({
+            where: {
+                id: BigInt(id),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesUserExist) {
+            res.status(401).json(HttpResult.Fail("Error: User does not exist!"));
+            return;  
         }
 
         const doesTripExist = await prisma.tb_trip.count({
@@ -847,5 +867,318 @@ export const updateNotes = async (req: Request, res: Response): Promise<void> =>
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on updateNotes"));
         console.log(error);
+    }
+}
+
+export const deleteExpense = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { tripId, expenseId, type } = req.body;
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!SECRET_KEY) {
+            throw new Error("SECRET_KEY is not defined in the .env file.");
+        }
+  
+        if (!token) {
+            res.status(401).json(HttpResult.Fail("Token was not provided!"));
+            return;
+        }
+
+        const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
+        const id = decoded.id;
+
+        if (!Utils.doesValueExist(id) || !Utils.isBigInt(id)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of user ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        if (!Utils.doesValueExist(tripId) || !Utils.isBigInt(tripId)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of trip ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        if (!Utils.doesValueExist(expenseId) || !Utils.isBigInt(expenseId)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of expense ID is invalid or was not provided correctly"));
+            return; 
+        }
+
+        const doesUserExist = await prisma.tb_user.count({
+            where: {
+                id: BigInt(id),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesUserExist) {
+            res.status(401).json(HttpResult.Fail("Error: User does not exist!"));
+            return;  
+        }
+
+        const doesTripExist = await prisma.tb_trip.count({
+            where: {
+                id: BigInt(tripId),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesTripExist) {
+            res.status(404).json(HttpResult.Fail("Error: Trip does not exist!"));
+            return;
+        }
+
+        if (type == 'airplane') {
+            const doesExpenseExist = await prisma.tb_airplane_expense.count({
+                where: {
+                    id: BigInt(expenseId),
+                    tripId: BigInt(tripId)
+                }
+            }) > 0 ? true : false;
+    
+            if (!doesExpenseExist) {
+                res.status(404).json(HttpResult.Fail("Error: Airplane expense does not exist!"));
+                return;
+            }
+
+            await prisma.tb_airplane_expense.delete({
+                where: {
+                    id: BigInt(expenseId),
+                    tripId: BigInt(tripId)
+                }
+            });
+
+            res.status(200).json(HttpResult.Success("Airplane expense deleted successfully"));
+        } else if (type == 'transportation') {
+            const doesExpenseExist = await prisma.tb_transportation_expense.count({
+                where: {
+                    id: BigInt(expenseId),
+                    tripId: BigInt(tripId)
+                }
+            }) > 0 ? true : false;
+    
+            if (!doesExpenseExist) {
+                res.status(404).json(HttpResult.Fail("Error: Transportation expense does not exist!"));
+                return;
+            }
+
+            await prisma.tb_transportation_expense.delete({
+                where: {
+                    id: BigInt(expenseId),
+                    tripId: BigInt(tripId)
+                }
+            });
+
+            res.status(200).json(HttpResult.Success("Transportation expense deleted successfully"));
+        } else if (type == 'food') {
+            const doesExpenseExist = await prisma.tb_food_expense.count({
+                where: {
+                    id: BigInt(expenseId),
+                    tripId: BigInt(tripId)
+                }
+            }) > 0 ? true : false;
+    
+            if (!doesExpenseExist) {
+                res.status(404).json(HttpResult.Fail("Error: Food expense does not exist!"));
+                return;
+            }
+
+            await prisma.tb_food_expense.delete({
+                where: {
+                    id: BigInt(expenseId),
+                    tripId: BigInt(tripId)
+                }
+            });
+
+            res.status(200).json(HttpResult.Success("Food expense deleted successfully"));
+        } else if (type == 'attraction') {
+            const doesExpenseExist = await prisma.tb_attraction_expense.count({
+                where: {
+                    id: BigInt(expenseId),
+                    tripId: BigInt(tripId)
+                }
+            }) > 0 ? true : false;
+    
+            if (!doesExpenseExist) {
+                res.status(404).json(HttpResult.Fail("Error: Attraction expense does not exist!"));
+                return;
+            }
+
+            await prisma.tb_attraction_expense.delete({
+                where: {
+                    id: BigInt(expenseId),
+                    tripId: BigInt(tripId)
+                }
+            });
+
+            res.status(200).json(HttpResult.Success("Attraction expense deleted successfully"));
+        } else if (type == 'accomodation') {
+            const doesExpenseExist = await prisma.tb_accomodation_expense.count({
+                where: {
+                    id: BigInt(expenseId),
+                    tripId: BigInt(tripId)
+                }
+            }) > 0 ? true : false;
+    
+            if (!doesExpenseExist) {
+                res.status(404).json(HttpResult.Fail("Error: Accomodation expense does not exist!"));
+                return;
+            }
+
+            await prisma.tb_accomodation_expense.delete({
+                where: {
+                    id: BigInt(expenseId),
+                    tripId: BigInt(tripId)
+                }
+            });
+
+            res.status(200).json(HttpResult.Success("Accomodation expense deleted successfully"));
+        }
+
+    } catch (error: any) {
+        res.status(400).json(HttpResult.Fail("A unexpected error occured on deleteExpense"));
+        console.error(error);
+    }
+}
+
+export const createExpense = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { 
+            tripId,
+            expense,
+            name,
+            type,
+            duration,
+            place,
+            origin,
+            destination,
+            price,
+            countryCurrency,
+            day
+        } = req.body as createExpenses;
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!SECRET_KEY) {
+            throw new Error("SECRET_KEY is not defined in the .env file.");
+        }
+  
+        if (!token) {
+            res.status(401).json(HttpResult.Fail("Token was not provided!"));
+            return;
+        }
+
+        const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
+        const idData = decoded.id;
+
+        if (!Utils.doesValueExist(idData) || !Utils.isBigInt(idData)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of user ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        if (!Utils.doesValueExist(tripId) || !Utils.isBigInt(tripId)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of trip ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        const doesUserExist = await prisma.tb_user.count({
+            where: {
+                id: BigInt(idData),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesUserExist) {
+            res.status(401).json(HttpResult.Fail("Error: User does not exist!"));
+            return;  
+        }
+
+        const doesTripExist = await prisma.tb_trip.count({
+            where: {
+                id: BigInt(String(tripId)),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesTripExist) {
+            res.status(404).json(HttpResult.Fail("Error: Trip does not exist!"));
+            return;
+        }
+
+        if (expense == 'airplane') {
+            await prisma.tb_airplane_expense.create({
+                data: {
+                    tripId: tripId,
+                    expense: expense,
+                    name: name,
+                    origin: origin,
+                    destination: destination,
+                    price: price,
+                    countryCurrency: countryCurrency,
+                    day: day
+                }
+            });
+
+            res.status(200).json(HttpResult.Success("Airplane expense deleted successfully"));
+        } else if (expense == 'transportation') {
+            await prisma.tb_transportation_expense.create({
+                data: {
+                    tripId: tripId,
+                    expense: expense,
+                    type: type,
+                    origin: origin,
+                    destination: destination,
+                    price: price,
+                    countryCurrency: countryCurrency,
+                    day: day
+                }
+            });
+
+            res.status(200).json(HttpResult.Success("Transportation expense deleted successfully"));
+        } else if (expense == 'food') {
+            await prisma.tb_food_expense.create({
+                data: {
+                    tripId: tripId,
+                    expense: expense,
+                    name: name,
+                    type: type,
+                    place: place,
+                    price: price,
+                    countryCurrency: countryCurrency,
+                    day: day
+                }
+            });
+
+            res.status(200).json(HttpResult.Success("Food expense deleted successfully"));
+        } else if (expense == 'attraction') {
+            await prisma.tb_attraction_expense.create({
+                data: {
+                    tripId: tripId,
+                    expense: expense,
+                    name: name,
+                    type: type,
+                    duration: duration,
+                    price: price,
+                    countryCurrency: countryCurrency,
+                    day: day
+                }
+            });
+
+            res.status(200).json(HttpResult.Success("Attraction expense deleted successfully"));
+        } else if (expense == 'accomodation') {
+            await prisma.tb_accomodation_expense.create({
+                data: {
+                    tripId: tripId,
+                    expense: expense,
+                    name: name,
+                    type: type,
+                    duration: duration,
+                    price: price,
+                    countryCurrency: countryCurrency,
+                    day: day
+                }
+            });
+
+            res.status(200).json(HttpResult.Success("Accomodation expense deleted successfully"));
+        }
+
+    } catch (error: any) {
+        res.status(400).json(HttpResult.Fail("A unexpected error occured on createExpense"));
+        console.error(error);
     }
 }
