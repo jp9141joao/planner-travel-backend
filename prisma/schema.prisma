@@ -7,6 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model tb_expense {
+  id              BigInt   @id(map: "pk_tb_expense_id") @default(autoincrement())
+  tripId          BigInt
+  type            String   @db.VarChar(12)
+  name            String?  @db.VarChar(15)
+  category        String?  @db.VarChar(16)
+  duration        String?  @db.VarChar(16)
+  place           String?  @db.VarChar(15)
+  origin          String?  @db.VarChar(15)
+  destination     String?  @db.VarChar(15)
+  price           Decimal  @db.Decimal(9, 2)
+  countryCurrency String   @db.VarChar(3)
+  day             Int
+  date            DateTime @db.Date
+  tb_trip         tb_trip  @relation(fields: [tripId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tb_expense_tripid")
+}
+
 model tb_trip {
   id           BigInt       @id(map: "pk_tb_trip_id") @default(autoincrement())
   userId       BigInt
@@ -26,21 +43,4 @@ model tb_user {
   fullName String @db.VarChar(50)
   email    String @unique(map: "unique_email") @db.VarChar(255)
   password String @db.VarChar(255)
-}
-
-model tb_expense {
-  id              BigInt   @id(map: "pk_tb_expense_id") @default(autoincrement())
-  tripId          BigInt
-  type            String   @db.VarChar(12)
-  name            String?  @db.VarChar(15)
-  category        String?  @db.VarChar(16)
-  duration        String?  @db.VarChar(16)
-  place           String?  @db.VarChar(16)
-  origin          String?  @db.VarChar(16)
-  destination     String?  @db.VarChar(16)
-  price           Decimal  @db.Decimal(9, 2)
-  countryCurrency String   @db.VarChar(3)
-  day             Int
-  date            DateTime @db.Date
-  tb_trip         tb_trip  @relation(fields: [tripId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tb_expense_tripid")
 }
