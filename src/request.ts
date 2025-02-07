@@ -50,11 +50,11 @@ export interface TokenContent {
     email: string,
 }
 
-export interface createExpenses {
+export interface CreateExpense {
     tripId: bigint,
-    expense: string
+    type: string
     name: string | null,
-    type: string | null,
+    category: string | null,
     duration: string | null,
     place: string | null,
     origin: string | null,

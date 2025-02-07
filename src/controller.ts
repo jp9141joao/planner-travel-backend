@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { createAirplaneExpense, createExpenses, createTransportationExpense, CreateTrip, CreateUser, LoginUser, NewPasswordUser, TokenContent, UpdateTrip, UpdateUser } from './request';
+import { createAirplaneExpense, CreateExpense, CreateExpenses, createExpenses, createTransportationExpense, CreateTrip, CreateUser, LoginUser, NewPasswordUser, TokenContent, UpdateTrip, UpdateUser } from './request';
 import { Utils } from './utils';
 import { HttpResult } from './models/httpresult';
 import { where } from 'sequelize';
@@ -870,9 +870,159 @@ export const updateNotes = async (req: Request, res: Response): Promise<void> =>
     }
 }
 
+export const getExpense = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { tripId, expenseId } = req.body;
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!SECRET_KEY) {
+            throw new Error("SECRET_KEY is not defined in the .env file.");
+        }
+  
+        if (!token) {
+            res.status(401).json(HttpResult.Fail("Token was not provided!"));
+            return;
+        }
+
+        const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
+        const id = decoded.id;
+
+        if (!Utils.doesValueExist(id) || !Utils.isBigInt(id)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of user ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        if (!Utils.doesValueExist(tripId) || !Utils.isBigInt(tripId)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of trip ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        if (!Utils.doesValueExist(expenseId) || !Utils.isBigInt(expenseId)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of expense ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        const doesUserExist = await prisma.tb_user.count({
+            where: {
+                id: BigInt(id),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesUserExist) {
+            res.status(401).json(HttpResult.Fail("Error: User does not exist!"));
+            return;  
+        }
+
+        const doesTripExist = await prisma.tb_trip.count({
+            where: {
+                id: BigInt(tripId),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesTripExist) {
+            res.status(404).json(HttpResult.Fail("Error: Trip does not exist!"));
+            return;
+        }
+
+        const doesExpenseExist = await prisma.tb_expense.count({
+            where: {
+                id: BigInt(tripId),
+                tripId: BigInt(tripId),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesExpenseExist) {
+            res.status(404).json(HttpResult.Fail("Error: Expense does not exist!"));
+            return;
+        }
+
+        const gotExpense = await prisma.tb_expense.findFirst({
+            where: {
+                id: BigInt(id),
+                tripId: BigInt(tripId),
+            }
+        });
+        const gotExpenseFormatted = {
+            ...gotExpense,
+            id: gotExpense.toString(),
+            tripId: gotExpense.toString(),
+        };
+
+        res.status(200).json(HttpResult.Success(gotExpenseFormatted));
+    } catch (error: any) {
+        res.status(400).json(HttpResult.Fail("A unexpected error occured on deleteExpense"));
+        console.error(error);
+    }
+}
+
+export const getExpenses = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { tripId } = req.body;
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!SECRET_KEY) {
+            throw new Error("SECRET_KEY is not defined in the .env file.");
+        }
+  
+        if (!token) {
+            res.status(401).json(HttpResult.Fail("Token was not provided!"));
+            return;
+        }
+
+        const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
+        const id = decoded.id;
+
+        if (!Utils.doesValueExist(id) || !Utils.isBigInt(id)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of user ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        if (!Utils.doesValueExist(tripId) || !Utils.isBigInt(tripId)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of trip ID is invalid or was not provided correctly"));
+            return;    
+        }
+
+        const doesUserExist = await prisma.tb_user.count({
+            where: {
+                id: BigInt(id),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesUserExist) {
+            res.status(401).json(HttpResult.Fail("Error: User does not exist!"));
+            return;  
+        }
+
+        const doesTripExist = await prisma.tb_trip.count({
+            where: {
+                id: BigInt(tripId),
+            }
+        }) > 0 ? true : false;
+
+        if (!doesTripExist) {
+            res.status(404).json(HttpResult.Fail("Error: Trip does not exist!"));
+            return;
+        }
+
+        const gotExpenses = await prisma.tb_expense.findMany();
+        const gotExpensesFormatted = gotExpenses.map((expense: any) => {
+            expense.id = expense.id.toString();
+            expense.tripId = expense.tripId.toString();
+            return expense;
+        })
+
+        res.status(200).json(HttpResult.Success(gotExpensesFormatted));
+    } catch (error: any) {
+        res.status(400).json(HttpResult.Fail("A unexpected error occured on deleteExpense"));
+        console.error(error);
+    }
+}
+
 export const deleteExpense = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { tripId, expenseId, type } = req.body;
+        const { tripId, expenseId } = req.body;
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
 
@@ -925,113 +1075,26 @@ export const deleteExpense = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        if (type == 'airplane') {
-            const doesExpenseExist = await prisma.tb_airplane_expense.count({
-                where: {
-                    id: BigInt(expenseId),
-                    tripId: BigInt(tripId)
-                }
-            }) > 0 ? true : false;
-    
-            if (!doesExpenseExist) {
-                res.status(404).json(HttpResult.Fail("Error: Airplane expense does not exist!"));
-                return;
+        const doesExpenseExist = await prisma.tb_expense.count({
+            where: {
+                id: BigInt(tripId),
+                tripId: BigInt(tripId),
             }
+        }) > 0 ? true : false;
 
-            await prisma.tb_airplane_expense.delete({
-                where: {
-                    id: BigInt(expenseId),
-                    tripId: BigInt(tripId)
-                }
-            });
-
-            res.status(200).json(HttpResult.Success("Airplane expense deleted successfully"));
-        } else if (type == 'transportation') {
-            const doesExpenseExist = await prisma.tb_transportation_expense.count({
-                where: {
-                    id: BigInt(expenseId),
-                    tripId: BigInt(tripId)
-                }
-            }) > 0 ? true : false;
-    
-            if (!doesExpenseExist) {
-                res.status(404).json(HttpResult.Fail("Error: Transportation expense does not exist!"));
-                return;
-            }
-
-            await prisma.tb_transportation_expense.delete({
-                where: {
-                    id: BigInt(expenseId),
-                    tripId: BigInt(tripId)
-                }
-            });
-
-            res.status(200).json(HttpResult.Success("Transportation expense deleted successfully"));
-        } else if (type == 'food') {
-            const doesExpenseExist = await prisma.tb_food_expense.count({
-                where: {
-                    id: BigInt(expenseId),
-                    tripId: BigInt(tripId)
-                }
-            }) > 0 ? true : false;
-    
-            if (!doesExpenseExist) {
-                res.status(404).json(HttpResult.Fail("Error: Food expense does not exist!"));
-                return;
-            }
-
-            await prisma.tb_food_expense.delete({
-                where: {
-                    id: BigInt(expenseId),
-                    tripId: BigInt(tripId)
-                }
-            });
-
-            res.status(200).json(HttpResult.Success("Food expense deleted successfully"));
-        } else if (type == 'attraction') {
-            const doesExpenseExist = await prisma.tb_attraction_expense.count({
-                where: {
-                    id: BigInt(expenseId),
-                    tripId: BigInt(tripId)
-                }
-            }) > 0 ? true : false;
-    
-            if (!doesExpenseExist) {
-                res.status(404).json(HttpResult.Fail("Error: Attraction expense does not exist!"));
-                return;
-            }
-
-            await prisma.tb_attraction_expense.delete({
-                where: {
-                    id: BigInt(expenseId),
-                    tripId: BigInt(tripId)
-                }
-            });
-
-            res.status(200).json(HttpResult.Success("Attraction expense deleted successfully"));
-        } else if (type == 'accomodation') {
-            const doesExpenseExist = await prisma.tb_accomodation_expense.count({
-                where: {
-                    id: BigInt(expenseId),
-                    tripId: BigInt(tripId)
-                }
-            }) > 0 ? true : false;
-    
-            if (!doesExpenseExist) {
-                res.status(404).json(HttpResult.Fail("Error: Accomodation expense does not exist!"));
-                return;
-            }
-
-            await prisma.tb_accomodation_expense.delete({
-                where: {
-                    id: BigInt(expenseId),
-                    tripId: BigInt(tripId)
-                }
-            });
-
-            res.status(200).json(HttpResult.Success("Accomodation expense deleted successfully"));
+        if (!doesExpenseExist) {
+            res.status(404).json(HttpResult.Fail("Error: Expense does not exist!"));
+            return;
         }
 
+        await prisma.tb_expense.delete({
+            where: {
+                id: BigInt(expenseId),
+                tripId: BigInt(tripId)
+            }
+        });
+
+        res.status(200).json(HttpResult.Success("Expense deleted successfully"));      
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on deleteExpense"));
         console.error(error);
@@ -1042,9 +1105,9 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
     try {
         const { 
             tripId,
-            expense,
-            name,
             type,
+            name,
+            category,
             duration,
             place,
             origin,
@@ -1052,7 +1115,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
             price,
             countryCurrency,
             day
-        } = req.body as createExpenses;
+        } = req.body as CreateExpense;
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
 
@@ -1078,6 +1141,112 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
             return;    
         }
 
+        if (!Utils.doesValueExist(type) || typeof type != 'string' || type.length > 12) {
+            res.status(400).json(HttpResult.Fail("Error: the value of type is invalid or was not provided correctly"));
+            return;
+        }
+
+        if (name) {
+            if (!Utils.doesValueExist(name) || typeof name != 'string') {
+                res.status(400).json(HttpResult.Fail("Error: the value of name is invalid or was not provided correctly"));
+                return;
+            } else if (name.length < 3) {
+                res.status(400).json(HttpResult.Fail("Error: the value of name is too short!"));
+                return;
+            } else if (name.length > 15) {
+                res.status(400).json(HttpResult.Fail("Error: the value of name is too large!"));
+                return;
+            }
+        }
+
+        if (category) {
+            if (!Utils.doesValueExist(category) || typeof category != 'string' || category.length > 16) {
+                res.status(400).json(HttpResult.Fail("Error: the value of category is invalid or was not provided correctly"));
+                return;
+            }
+        }
+
+        if (duration) {
+            if (!Utils.doesValueExist(duration) || typeof duration != 'string' || duration.length > 16) {
+                res.status(400).json(HttpResult.Fail("Error: the value of duration is invalid or was not provided correctly"));
+                return;
+            }
+        }
+
+        if (place) {
+            if (!Utils.doesValueExist(place) || typeof place != 'string') {
+                res.status(400).json(HttpResult.Fail("Error: the value of place is invalid or was not provided correctly"));
+                return;
+            } else if (place.length < 3) {
+                res.status(400).json(HttpResult.Fail("Error: the value of place is too short!"));
+                return;
+            } else if (place.length > 15) {
+                res.status(400).json(HttpResult.Fail("Error: the value of place is too large!"));
+                return;
+            }
+        }
+        
+        if (origin) {
+            if (!Utils.doesValueExist(origin) || typeof origin != 'string') {
+                res.status(400).json(HttpResult.Fail("Error: the value of origin is invalid or was not provided correctly"));
+                return;
+            } else if (origin.length < 3) {
+                res.status(400).json(HttpResult.Fail("Error: the value of origin is too short!"));
+                return;
+            } else if (origin.length > 15) {
+                res.status(400).json(HttpResult.Fail("Error: the value of origin is too large!"));
+                return;
+            }
+        }
+
+        if (destination) {
+            if (!Utils.doesValueExist(destination) || typeof destination != 'string') {
+                res.status(400).json(HttpResult.Fail("Error: the value of destination is invalid or was not provided correctly"));
+                return;
+            } else if (destination.length < 3) {
+                res.status(400).json(HttpResult.Fail("Error: the value of destination is too short!"));
+                return;
+            } else if (destination.length > 15) {
+                res.status(400).json(HttpResult.Fail("Error: the value of destination is too large!"));
+                return;
+            }
+        }
+
+        if (!Utils.doesValueExist(price) || !Utils.isNumber(price)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of price is invalid or was not provided correctly"));
+            return;
+        } else if (price <= 0) {
+            res.status(400).json(HttpResult.Fail("Error: the value of price is less or equal than zero!"));
+            return;
+        } else if (price > 9999999.99) {
+            res.status(400).json(HttpResult.Fail("Error: the value of price is too large!"));
+            return;
+        } else if (price.toString().split('.')[1].length > 2) {
+            res.status(400).json(HttpResult.Fail("Error: the format of price is invalid! Only up to two decimal places are allowed."));
+            return;
+        }
+
+        if (!Utils.doesValueExist(countryCurrency) || typeof countryCurrency != 'string' || countryCurrency.length != 3) {
+            res.status(400).json(HttpResult.Fail("Error: the value of country currency is invalid or was not provided correctly"));
+            return;
+        }
+
+        const doesTripExist = await prisma.tb_trip.findFirst({
+            where: {
+                id: BigInt(tripId),
+            }
+        });
+
+        if (!doesTripExist) {
+            res.status(404).json(HttpResult.Fail("Error: Trip does not exist!"));
+            return;
+        }
+
+        if (!Utils.doesValueExist(day) || !Utils.isNumber(day) || day <= 0 || day > doesTripExist.daysQty) {
+            res.status(400).json(HttpResult.Fail("Error: the value of day is invalid or was not provided correctly"));
+            return;
+        }
+
         const doesUserExist = await prisma.tb_user.count({
             where: {
                 id: BigInt(idData),
@@ -1089,94 +1258,86 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
             return;  
         }
 
-        const doesTripExist = await prisma.tb_trip.count({
-            where: {
-                id: BigInt(String(tripId)),
-            }
-        }) > 0 ? true : false;
+        const currentDate: Date = new Date();
 
-        if (!doesTripExist) {
-            res.status(404).json(HttpResult.Fail("Error: Trip does not exist!"));
-            return;
-        }
-
-        if (expense == 'airplane') {
+        if (type == 'Airplane') {
             await prisma.tb_airplane_expense.create({
                 data: {
                     tripId: tripId,
-                    expense: expense,
+                    type: type,
                     name: name,
                     origin: origin,
                     destination: destination,
                     price: price,
                     countryCurrency: countryCurrency,
-                    day: day
+                    day: day,
+                    date: currentDate,
                 }
             });
 
-            res.status(200).json(HttpResult.Success("Airplane expense deleted successfully"));
-        } else if (expense == 'transportation') {
+        } else if (type == 'Transportation') {
             await prisma.tb_transportation_expense.create({
                 data: {
                     tripId: tripId,
-                    expense: expense,
                     type: type,
+                    category: category,
                     origin: origin,
                     destination: destination,
                     price: price,
                     countryCurrency: countryCurrency,
-                    day: day
+                    day: day,
+                    date: currentDate,
                 }
             });
 
-            res.status(200).json(HttpResult.Success("Transportation expense deleted successfully"));
-        } else if (expense == 'food') {
+        } else if (type == 'Food') {
             await prisma.tb_food_expense.create({
                 data: {
                     tripId: tripId,
-                    expense: expense,
-                    name: name,
                     type: type,
+                    name: name,
+                    category: category,
                     place: place,
                     price: price,
                     countryCurrency: countryCurrency,
-                    day: day
+                    day: day,
+                    date: currentDate,
                 }
             });
 
-            res.status(200).json(HttpResult.Success("Food expense deleted successfully"));
-        } else if (expense == 'attraction') {
+        } else if (type == 'Attraction') {
             await prisma.tb_attraction_expense.create({
                 data: {
                     tripId: tripId,
-                    expense: expense,
-                    name: name,
                     type: type,
+                    name: name,
+                    category: category,
                     duration: duration,
                     price: price,
                     countryCurrency: countryCurrency,
-                    day: day
+                    day: day,
+                    date: currentDate,
                 }
             });
 
-            res.status(200).json(HttpResult.Success("Attraction expense deleted successfully"));
-        } else if (expense == 'accomodation') {
+        } else if (type == 'Accomodation') {
             await prisma.tb_accomodation_expense.create({
                 data: {
                     tripId: tripId,
-                    expense: expense,
-                    name: name,
                     type: type,
+                    name: name,
+                    category: category,
                     duration: duration,
                     price: price,
                     countryCurrency: countryCurrency,
-                    day: day
+                    day: day,
+                    date: currentDate,
                 }
             });
 
             res.status(200).json(HttpResult.Success("Accomodation expense deleted successfully"));
         }
-
+    
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on createExpense"));
         console.error(error);

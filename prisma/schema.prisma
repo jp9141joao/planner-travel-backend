@@ -8,16 +8,17 @@ datasource db {
 }
 
 model tb_trip {
-  id           BigInt   @id(map: "pk_tb_trip_id") @default(autoincrement())
+  id           BigInt       @id(map: "pk_tb_trip_id") @default(autoincrement())
   userId       BigInt
-  tripName     String   @db.VarChar(22)
-  period       String   @db.Char(27)
+  tripName     String       @db.VarChar(22)
+  period       String       @db.Char(27)
   daysQty      Int
-  currency     String?  @db.Char(3)
-  budgetAmount Decimal  @db.Decimal(13, 2)
-  season       String?  @db.VarChar(7)
-  notes        String?  @db.VarChar(255)
-  spent        Decimal? @db.Decimal(13, 2)
+  currency     String?      @db.Char(3)
+  budgetAmount Decimal      @db.Decimal(13, 2)
+  season       String?      @db.VarChar(7)
+  notes        String?      @db.VarChar(255)
+  spent        Decimal?     @db.Decimal(13, 2)
+  tb_expense   tb_expense[]
 }
 
 model tb_user {
@@ -25,4 +26,21 @@ model tb_user {
   fullName String @db.VarChar(50)
   email    String @unique(map: "unique_email") @db.VarChar(255)
   password String @db.VarChar(255)
+}
+
+model tb_expense {
+  id              BigInt   @id(map: "pk_tb_expense_id") @default(autoincrement())
+  tripId          BigInt
+  type            String   @db.VarChar(12)
+  name            String?  @db.VarChar(15)
+  category        String?  @db.VarChar(16)
+  duration        String?  @db.VarChar(16)
+  place           String?  @db.VarChar(16)
+  origin          String?  @db.VarChar(16)
+  destination     String?  @db.VarChar(16)
+  price           Decimal  @db.Decimal(9, 2)
+  countryCurrency String   @db.VarChar(3)
+  day             Int
+  date            DateTime @db.Date
+  tb_trip         tb_trip  @relation(fields: [tripId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tb_expense_tripid")
 }

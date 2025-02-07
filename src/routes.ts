@@ -16,6 +16,6 @@ routes.get('/tripDetails', getTrip);
 routes.put('/tripDetails', updateNotes);
 routes.get('/editTrip', getTrip);
 routes.put('/editTrip', updateTrip);
-routes.delete('expenses', deleteExpense);
+routes.get('/viewExpenses', getTrips);
 
 export { routes };
