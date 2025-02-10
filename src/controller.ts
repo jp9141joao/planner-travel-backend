@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import { createAirplaneExpense, CreateExpense, CreateExpenses, createExpenses, createTransportationExpense, CreateTrip, CreateUser, LoginUser, NewPasswordUser, TokenContent, UpdateTrip, UpdateUser } from './request';
+import { CreateExpense, CreateTrip, CreateUser, LoginUser, NewPasswordUser, TokenContent, UpdateTrip, UpdateUser } from './request';
 import { Utils } from './utils';
 import { HttpResult } from './models/httpresult';
 import { where } from 'sequelize';
@@ -945,8 +945,8 @@ export const getExpense = async (req: Request, res: Response): Promise<void> => 
         });
         const gotExpenseFormatted = {
             ...gotExpense,
-            id: gotExpense.toString(),
-            tripId: gotExpense.toString(),
+            id: gotExpense?.toString(),
+            tripId: gotExpense?.toString(),
         };
 
         res.status(200).json(HttpResult.Success(gotExpenseFormatted));
@@ -1261,7 +1261,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
         const currentDate: Date = new Date();
 
         if (type == 'Airplane') {
-            await prisma.tb_airplane_expense.create({
+            await prisma.tb_expense.create({
                 data: {
                     tripId: tripId,
                     type: type,
@@ -1276,7 +1276,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
             });
 
         } else if (type == 'Transportation') {
-            await prisma.tb_transportation_expense.create({
+            await prisma.tb_expense.create({
                 data: {
                     tripId: tripId,
                     type: type,
@@ -1291,7 +1291,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
             });
 
         } else if (type == 'Food') {
-            await prisma.tb_food_expense.create({
+            await prisma.tb_expense.create({
                 data: {
                     tripId: tripId,
                     type: type,
@@ -1306,7 +1306,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
             });
 
         } else if (type == 'Attraction') {
-            await prisma.tb_attraction_expense.create({
+            await prisma.tb_expense.create({
                 data: {
                     tripId: tripId,
                     type: type,
@@ -1321,7 +1321,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
             });
 
         } else if (type == 'Accomodation') {
-            await prisma.tb_accomodation_expense.create({
+            await prisma.tb_expense.create({
                 data: {
                     tripId: tripId,
                     type: type,
