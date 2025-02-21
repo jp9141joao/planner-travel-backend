@@ -59,7 +59,7 @@ export interface CreateExpense {
     place: string | null,
     origin: string | null,
     destination: string | null,
-    price: number,
+    amount: string,
     countryCurrency: string,
     day: number,
 }

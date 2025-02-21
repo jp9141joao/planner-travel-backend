@@ -51,7 +51,7 @@ export class Utils {
     public static isNumber(value: string | number ): boolean {
         try {
             const numberValue = Number(value);
-            return !isNaN(numberValue) && Number.isInteger(numberValue);
+            return !isNaN(numberValue);
         } catch (e) {
             return false;
         }

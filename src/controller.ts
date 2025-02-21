@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtokresen';
 import dotenv from 'dotenv';
 import { CreateExpense, CreateTrip, CreateUser, LoginUser, NewPasswordUser, TokenContent, UpdateTrip, UpdateUser } from './request';
 import { Utils } from './utils';
@@ -68,7 +68,6 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
 export const createUser = async (req: Request, res: Response): Promise<void> => {
     try {
         const { fullName, email, password } = req.body as CreateUser;
-        console.log(!Utils.isFullNameValid(fullName));
         
         if (!Utils.doesValueExist(fullName) || !Utils.isFullNameValid(fullName)) {
             res.status(404).json(HttpResult.Fail("Error: The value of fullName is invalid!"));
@@ -129,7 +128,6 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
     try {
         const { email, password, newPassword } = req.body as NewPasswordUser;
 
-        console.log(email)
         if (!Utils.doesValueExist(email) || typeof email != 'string' || email.length > 255) {
             res.status(404).json(HttpResult.Fail("Error: The value of email is invalid!"));
             return;
@@ -321,7 +319,7 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
         res.status(200).json(HttpResult.Success(updatedUserFormated));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on updateUser!"));
-        console.log(error);
+        console.error(error);
     }
 }
 
@@ -403,14 +401,15 @@ export const createTrip = async (req: Request, res: Response): Promise<void> => 
                 daysQty: daysQty,
                 currency: currency,
                 budgetAmount: budgetAmount,
-                season: season
+                season: season,
+                spent: 0
             }
         });
 
         res.status(200).json(HttpResult.Success("Trip created successfully"));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on updateUser!"));
-        console.log(error);
+        console.error(error);
     }
 }
 
@@ -431,7 +430,6 @@ export const getTrip = async (req: Request, res: Response): Promise<void> => {
 
         const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
         const id = decoded.id;
-
 
         if (!Utils.doesValueExist(id) || !Utils.isBigInt(id)) {
             res.status(400).json(HttpResult.Fail("Error: the value of user ID is invalid or was not provided correctly"));
@@ -466,7 +464,6 @@ export const getTrip = async (req: Request, res: Response): Promise<void> => {
             return;  
         }
 
-
         const gotTrip = await prisma.tb_trip.findFirst({
             where: {
                 id: BigInt(String(tripId)),
@@ -479,11 +476,11 @@ export const getTrip = async (req: Request, res: Response): Promise<void> => {
             id: gotTrip?.id.toString(),
             userId: gotTrip?.userId.toString(),
         };
-        10
+
         res.status(200).json(HttpResult.Success(gotTripFormatted));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on getTrips!"));
-        console.log(error);
+        console.error(error);
     }
 }
 
@@ -538,7 +535,7 @@ export const getTrips = async (req: Request, res: Response): Promise<void> => {
         res.status(200).json(HttpResult.Success(gotTripsFormatted));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on getTrip!"));
-        console.log(error)
+        console.error(error);
     }
 }
 
@@ -658,7 +655,7 @@ export const updateTrip = async (req: Request, res: Response): Promise<void> => 
         res.status(200).json(HttpResult.Success(updatedTripFormatted));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on duplicateTrip"));
-        console.log(error);
+        console.error(error);
     }
 }
 
@@ -731,7 +728,7 @@ export const duplicateTrip = async (req: Request, res: Response): Promise<void> 
         res.status(200).json(HttpResult.Success("Trip duplicated successfully"));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on duplicateTrip"));
-        console.log(error);
+        console.error(error);
     }
 }
 
@@ -794,7 +791,7 @@ export const deleteTrip = async (req: Request, res: Response): Promise<void> => 
         res.status(200).json(HttpResult.Success("Trip deleted successfully"));
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on deleteTrip!"));
-        console.log(error);
+        console.error(error);
     }
 }
 
@@ -866,7 +863,7 @@ export const updateNotes = async (req: Request, res: Response): Promise<void> =>
 
     } catch (error: any) {
         res.status(400).json(HttpResult.Fail("A unexpected error occured on updateNotes"));
-        console.log(error);
+        console.error(error);
     }
 }
 
@@ -958,7 +955,7 @@ export const getExpense = async (req: Request, res: Response): Promise<void> => 
 
 export const getExpenses = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { tripId } = req.body;
+        const { tripId } = req.query;
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];
 
@@ -984,6 +981,7 @@ export const getExpenses = async (req: Request, res: Response): Promise<void> =>
             return;    
         }
 
+
         const doesUserExist = await prisma.tb_user.count({
             where: {
                 id: BigInt(id),
@@ -997,7 +995,7 @@ export const getExpenses = async (req: Request, res: Response): Promise<void> =>
 
         const doesTripExist = await prisma.tb_trip.count({
             where: {
-                id: BigInt(tripId),
+                id: BigInt(String(tripId)),
             }
         }) > 0 ? true : false;
 
@@ -1011,7 +1009,7 @@ export const getExpenses = async (req: Request, res: Response): Promise<void> =>
             expense.id = expense.id.toString();
             expense.tripId = expense.tripId.toString();
             return expense;
-        })
+        });
 
         res.status(200).json(HttpResult.Success(gotExpensesFormatted));
     } catch (error: any) {
@@ -1103,6 +1101,8 @@ export const deleteExpense = async (req: Request, res: Response): Promise<void> 
 
 export const createExpense = async (req: Request, res: Response): Promise<void> => {
     try {
+        
+
         const { 
             tripId,
             type,
@@ -1112,7 +1112,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
             place,
             origin,
             destination,
-            price,
+            amount,
             countryCurrency,
             day
         } = req.body as CreateExpense;
@@ -1122,14 +1122,15 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
         if (!SECRET_KEY) {
             throw new Error("SECRET_KEY is not defined in the .env file.");
         }
-  
+        
+
         if (!token) {
             res.status(401).json(HttpResult.Fail("Token was not provided!"));
             return;
         }
 
         const decoded = jwt.verify(token, SECRET_KEY) as TokenContent;
-        const idData = decoded.id;
+        const idData = decoded.id
 
         if (!Utils.doesValueExist(idData) || !Utils.isBigInt(idData)) {
             res.status(400).json(HttpResult.Fail("Error: the value of user ID is invalid or was not provided correctly"));
@@ -1140,8 +1141,9 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
             res.status(400).json(HttpResult.Fail("Error: the value of trip ID is invalid or was not provided correctly"));
             return;    
         }
+        
 
-        if (!Utils.doesValueExist(type) || typeof type != 'string' || type.length > 12) {
+        if (!Utils.doesValueExist(type) || typeof type != 'string' || !['Flight', 'Transportation', 'Food', 'Attraction', 'Accomodation'].includes(type)) {
             res.status(400).json(HttpResult.Fail("Error: the value of type is invalid or was not provided correctly"));
             return;
         }
@@ -1212,22 +1214,19 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
             }
         }
 
-        if (!Utils.doesValueExist(price) || !Utils.isNumber(price)) {
-            res.status(400).json(HttpResult.Fail("Error: the value of price is invalid or was not provided correctly"));
-            return;
-        } else if (price <= 0) {
-            res.status(400).json(HttpResult.Fail("Error: the value of price is less or equal than zero!"));
-            return;
-        } else if (price > 9999999.99) {
-            res.status(400).json(HttpResult.Fail("Error: the value of price is too large!"));
-            return;
-        } else if (price.toString().split('.')[1].length > 2) {
-            res.status(400).json(HttpResult.Fail("Error: the format of price is invalid! Only up to two decimal places are allowed."));
-            return;
-        }
+        const amountFormatted: number = Number(amount.replace(/,/g, ''));
 
-        if (!Utils.doesValueExist(countryCurrency) || typeof countryCurrency != 'string' || countryCurrency.length != 3) {
-            res.status(400).json(HttpResult.Fail("Error: the value of country currency is invalid or was not provided correctly"));
+        if (!Utils.doesValueExist(amountFormatted) || !Utils.isNumber(amountFormatted)) {
+            res.status(400).json(HttpResult.Fail("Error: the value of amount is invalid or was not provided correctly"));
+            return;
+        } else if (amountFormatted <= 0) {
+            res.status(400).json(HttpResult.Fail("Error: the value of amount is less or equal than zero!"));
+            return;
+        } else if (amountFormatted > 9999999.99) {
+            res.status(400).json(HttpResult.Fail("Error: the value of amount is too large!"));
+            return;
+        } else if (amount.split('.')[1] && amount.split('.')[1].length > 2) {
+            res.status(400).json(HttpResult.Fail("Error: the format of amount is invalid! Only up to two decimal places are allowed."));
             return;
         }
 
@@ -1239,6 +1238,11 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
 
         if (!doesTripExist) {
             res.status(404).json(HttpResult.Fail("Error: Trip does not exist!"));
+            return;
+        }
+
+        if (!Utils.doesValueExist(countryCurrency) || typeof countryCurrency != 'string' || countryCurrency.length != 3 || countryCurrency != doesTripExist.currency) {
+            res.status(400).json(HttpResult.Fail("Error: the value of country currency is invalid or was not provided correctly"));
             return;
         }
 
@@ -1260,7 +1264,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
 
         const currentDate: Date = new Date();
 
-        if (type == 'Airplane') {
+        if (type == 'Flight') {
             await prisma.tb_expense.create({
                 data: {
                     tripId: tripId,
@@ -1268,13 +1272,14 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
                     name: name,
                     origin: origin,
                     destination: destination,
-                    price: price,
+                    amount: amountFormatted,
                     countryCurrency: countryCurrency,
                     day: day,
                     date: currentDate,
                 }
             });
 
+            res.status(200).json(HttpResult.Success("Flight Expense created successfully"));      
         } else if (type == 'Transportation') {
             await prisma.tb_expense.create({
                 data: {
@@ -1283,7 +1288,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
                     category: category,
                     origin: origin,
                     destination: destination,
-                    price: price,
+                    amount: amountFormatted,
                     countryCurrency: countryCurrency,
                     day: day,
                     date: currentDate,
@@ -1298,7 +1303,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
                     name: name,
                     category: category,
                     place: place,
-                    price: price,
+                    amount: amountFormatted,
                     countryCurrency: countryCurrency,
                     day: day,
                     date: currentDate,
@@ -1313,7 +1318,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
                     name: name,
                     category: category,
                     duration: duration,
-                    price: price,
+                    amount: amountFormatted,
                     countryCurrency: countryCurrency,
                     day: day,
                     date: currentDate,
@@ -1328,7 +1333,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
                     name: name,
                     category: category,
                     duration: duration,
-                    price: price,
+                    amount: amountFormatted,
                     countryCurrency: countryCurrency,
                     day: day,
                     date: currentDate,
@@ -1337,9 +1342,10 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
 
             res.status(200).json(HttpResult.Success("Accomodation expense deleted successfully"));
         }
-    
+        
+
     } catch (error: any) {
-        res.status(400).json(HttpResult.Fail("A unexpected error occured on createExpense"));
         console.error(error);
+        res.status(400).json(HttpResult.Fail("A unexpected error occured on createExpense"));
     }
 }

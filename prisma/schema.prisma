@@ -17,7 +17,7 @@ model tb_expense {
   place           String?  @db.VarChar(15)
   origin          String?  @db.VarChar(15)
   destination     String?  @db.VarChar(15)
-  price           Decimal  @db.Decimal(9, 2)
+  amount          Decimal  @db.Decimal(9, 2)
   countryCurrency String   @db.VarChar(3)
   day             Int
   date            DateTime @db.Date
