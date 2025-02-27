@@ -1,14 +1,12 @@
 import { PrismaClient } from '@prisma/client';
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtokresen';
+import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { CreateExpense, CreateTrip, CreateUser, LoginUser, NewPasswordUser, TokenContent, UpdateTrip, UpdateUser } from './request';
 import { Utils } from './utils';
 import { HttpResult } from './models/httpresult';
-import { where } from 'sequelize';
-import exp from 'constants';
-import { countReset } from 'console';
+
 
 dotenv.config();
 const SECRET_KEY = process.env.SECRET_KEY;
@@ -22,13 +20,32 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
             throw new Error("SECRET_KEY is not defined in the .env file.");
         }
 
-        if (!Utils.doesValueExist(email) || !Utils.isValidEmail(email))  {
-            res.status(404).json(HttpResult.Fail("Error: The value of email is invalid!"));
+        if (!Utils.doesValueExist(email)) {
+            res.status(404).json(HttpResult.Fail({
+                details :"VARIABLE NOT PROVIDED",
+                at: "E-mail"
+            }));
+            return;
+        } else if (!Utils.isValidEmail(email)) {
+
+            res.status(404).json(HttpResult.Fail({
+                details :"VARIABLE INVALID",
+                at: "E-mail"
+            }));
             return;
         }
 
-        if (!Utils.doesValueExist(password) || !Utils.isValidPassword(password)) {
-            res.status(404).json(HttpResult.Fail("Error: The value of password is invalid!"));
+        if (!Utils.doesValueExist(password)) {
+            res.status(404).json(HttpResult.Fail({
+                details :"VARIABLE NOT PROVIDED",
+                at: "Password"
+            }));
+            return;
+        } else if (!Utils.isValidPassword(password)) {
+            res.status(404).json(HttpResult.Fail({
+                details: "VARIABLE INVALID",
+                at: "Password"
+            }));
             return;
         }
 
@@ -39,14 +56,20 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
         })     
 
         if (!userData) {
-            res.status(400).json(HttpResult.Fail("Error: The email or password you entered is incorrect!"));
+            res.status(404).json(HttpResult.Fail({
+                details: "INVALID CREDETIALS",
+                at: "Email-Password"
+            }));
             return;
         }
         
         const validPassword = await bcrypt.compare(password, userData.password);
 
         if (!validPassword) {
-            res.status(404).json(HttpResult.Fail("Error: The email or password you entered is incorrect!"));
+            res.status(404).json(HttpResult.Fail({
+                details: "Error: The email or password you entered is incorrect!",
+                at: "Email-Password"
+            }));
             return;
         }
 
@@ -60,7 +83,9 @@ export const authSession = async (req: Request, res: Response): Promise<void> =>
 
         res.status(200).json(HttpResult.Success(token));
     } catch(error: any) {
-        res.status(400).json(HttpResult.Fail("A unexpected error occured on authSession"));
+        res.status(400).json(HttpResult.Fail({
+            details: "A unexpected error occured on authSession"
+        }));
         console.error(error);
     }
 }
